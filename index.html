@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Car Drive Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; position: relative; }
+    canvas { display: block; background: #444; }
+    .popup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 20;
+      text-align: center;
+    }
+    .popup button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div class="popup" id="gameOverPopup">
+  <h2>Game Over!</h2>
+  <button onclick="location.reload()">Restart</button>
+</div>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const popup = document.getElementById('gameOverPopup');let roadX, roadWidth, laneWidth; const laneCount = 3; let gameOver = false;
+
+let player = { lane: 1, width: 50, height: 80, color: 'blue', x: 0, y: 0 };
+
+let enemies = []; let trees = []; let cities = [];
+
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+
+roadWidth = canvas.width / 3; laneWidth = roadWidth / laneCount; roadX = (canvas.width - roadWidth) / 2;
+
+updatePlayerPosition(); player.y = canvas.height - player.height - 20; }
+
+window.addEventListener('resize', resizeCanvas);
+
+function drawRoad() { ctx.fillStyle = '#333'; ctx.fillRect(roadX, 0, roadWidth, canvas.height);
+
+ctx.strokeStyle = 'white'; ctx.lineWidth = 2; for (let i = 1; i < laneCount; i++) { let x = roadX + i * laneWidth; ctx.setLineDash([20, 20]); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); } ctx.setLineDash([]); }
+
+function drawSideObjects() { trees.forEach(tree => { ctx.fillStyle = 'green'; ctx.beginPath(); ctx.arc(tree.x, tree.y, 12, 0, Math.PI * 2); ctx.fill(); }); cities.forEach(city => { ctx.fillStyle = 'gray'; ctx.fillRect(city.x, city.y, 25, 50); }); }
+
+function drawCar(car) { ctx.fillStyle = car.color; ctx.fillRect(car.x, car.y, car.width, car.height); ctx.fillStyle = 'lightblue'; ctx.fillRect(car.x + 10, car.y + 10, car.width - 20, 15); ctx.fillStyle = 'black'; ctx.fillRect(car.x + 5, car.y + 5, 6, 10); ctx.fillRect(car.x + car.width - 11, car.y + 5, 6, 10); ctx.fillRect(car.x + 5, car.y + car.height - 15, 6, 10); ctx.fillRect(car.x + car.width - 11, car.y + car.height - 15, 6, 10); }
+
+function generateEnemies() { if (Math.random() < 0.02) { let lane = Math.floor(Math.random() * laneCount); let width = 50; let height = 80; enemies.push({ x: roadX + lane * laneWidth + (laneWidth - width) / 2, y: -height, width: width, height: height, color: 'red' }); } }
+
+function generateSideObjects() { if (Math.random() < 0.05) { trees.push({ x: Math.random() < 0.5 ? roadX - 40 : roadX + roadWidth + 40, y: -10 }); cities.push({ x: Math.random() < 0.5 ? roadX - 70 : roadX + roadWidth + 50, y: -60 }); } }
+
+function moveObjects() { enemies.forEach(e => e.y += 6); trees.forEach(t => t.y += 6); cities.forEach(c => c.y += 6);
+
+enemies = enemies.filter(e => e.y < canvas.height); trees = trees.filter(t => t.y < canvas.height); cities = cities.filter(c => c.y < canvas.height); }
+
+function detectCollision(a, b) { return ( a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y ); }
+
+function checkCollision() { for (let enemy of enemies) { if (detectCollision(player, enemy)) { gameOver = true; popup.style.display = 'block'; break; } } }
+
+function updatePlayerPosition() { player.x = roadX + player.lane * laneWidth + (laneWidth - player.width) / 2; }
+
+function update() { if (gameOver) return;
+
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+drawRoad(); drawSideObjects(); drawCar(player); enemies.forEach(drawCar);
+
+generateEnemies(); generateSideObjects(); moveObjects(); checkCollision();
+
+requestAnimationFrame(update); }
+
+window.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' && player.lane > 0) { player.lane--; updatePlayerPosition(); } else if (e.key === 'ArrowRight' && player.lane < laneCount - 1) { player.lane++; updatePlayerPosition(); } });
+
+canvas.addEventListener('touchstart', e => { if (gameOver) return; const touchX = e.touches[0].clientX; if (touchX < canvas.width / 2 && player.lane > 0) { player.lane--; } else if (touchX >= canvas.width / 2 && player.lane < laneCount - 1) { player.lane++; } updatePlayerPosition(); });
+
+resizeCanvas(); update(); </script>
+
+</body>
+</html>
